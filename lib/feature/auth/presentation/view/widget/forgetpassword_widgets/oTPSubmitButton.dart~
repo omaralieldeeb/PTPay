@@ -1,0 +1,118 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+
+class OTPSubmitButton extends StatefulWidget {
+  final bool isEnabled;
+  final VoidCallback onSubmit;
+  final VoidCallback onResend; // لإعادة الإرسال
+
+  const OTPSubmitButton({
+    Key? key,
+    required this.isEnabled,
+    required this.onSubmit,
+    required this.onResend,
+  }) : super(key: key);
+
+  @override
+  State<OTPSubmitButton> createState() => _OTPSubmitButtonState();
+}
+
+class _OTPSubmitButtonState extends State<OTPSubmitButton> {
+  int _secondsRemaining = 30;
+  late Timer _timer;
+  bool _canResend = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _canResend = false;
+    _secondsRemaining = 30;
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_secondsRemaining > 0) {
+        setState(() {
+          _secondsRemaining--;
+        });
+      } else {
+        setState(() {
+          _canResend = true;
+        });
+        _timer.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: widget.isEnabled ? widget.onSubmit : null,
+          child: Container(
+            width: 300,
+            height: 50,
+            decoration: BoxDecoration(
+              gradient: widget.isEnabled
+                  ? const LinearGradient(
+                colors: [Color(0xFF090909), Color(0xFF293851)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              )
+                  : null,
+              color: !widget.isEnabled ? Colors.white : null,
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: !widget.isEnabled
+                  ? [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 8,
+                  spreadRadius: 2,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+                  : [],
+            ),
+            child: Center(
+              child: Text(
+                'إرسال الكود',
+                style: TextStyle(
+                  color: widget.isEnabled ? Colors.white : const Color(0xFF979797),
+                  fontSize: 16,
+                  fontFamily: 'Alexandria',
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.80,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: _canResend
+              ? () {
+            widget.onResend();
+            _startTimer();
+          }
+              : null,
+          child: Text(
+            _canResend ? 'إعادة الإرسال' : 'إعادة الإرسال بعد $_secondsRemaining ثانية',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: _canResend ? Colors.orange : Colors.grey,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

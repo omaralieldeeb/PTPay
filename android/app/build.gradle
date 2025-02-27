@@ -6,6 +6,7 @@ plugins {
 }
 
 android {
+    namespace "com.example.ptpay"
     namespace = "com.example.ptpay"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
