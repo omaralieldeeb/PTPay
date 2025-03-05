@@ -19,10 +19,10 @@ class _CheckboxWidgetState extends State<CheckboxWidget> {
       children: [
         _buildCustomCheckbox(
           title: "أقبل استقبال التحديثات عبر البريد الإلكتروني.",
-          value: _acceptUpdates,
+          value: _acceptTerms,
           onChanged: (value) {
             setState(() {
-              _acceptUpdates = value!;
+              _acceptTerms = value!;
             });
             widget.onChanged(_acceptUpdates, _acceptTerms);
           },

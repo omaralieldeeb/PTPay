@@ -112,7 +112,7 @@ class _TextformMoneyState extends State<TextformMoney> {
                 child: TextFormField(
                   controller: widget.moneyController,
                   keyboardType: TextInputType.number,
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.center, // ✅ يجعل النص في المنتصف
                   style: const TextStyle(fontSize: 14),
                   decoration: InputDecoration(
                     hintText: '100.0 ج.م',

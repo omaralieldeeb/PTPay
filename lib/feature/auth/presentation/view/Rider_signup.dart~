@@ -83,7 +83,7 @@ class _SignUpPageRiderState extends State<SignUpPageRider> {
 
     try {
       final response = await _apiService.post(
-        endpoint: 'https://ahmed808.pythonanywhere.com/api/register/user/', // استبدل الرابط بالرابط الصحيح
+        endpoint: 'https://example.com/api/RegisterView/', // استبدل الرابط بالرابط الصحيح
         data: data,
       );
 
