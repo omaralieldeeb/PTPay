@@ -16,7 +16,7 @@ import 'package:ptpay/feature/home/presentation/view/invoice.dart';
 import 'package:ptpay/feature/splash/presentation/view/wellcome_page.dart';
 import 'package:ptpay/feature/splash/presentation/view/widget/on_boarding.dart';
 import 'package:ptpay/feature/splash/presentation/view/widget/start.dart';
-import '../../feature/auth/presentation/view/Rider_signup1.dart';
+import '../../feature/auth/presentation/view/Rider_signup.dart';
 
 abstract class AppRouter {
   static const KStartScreen = "/StartScreen";

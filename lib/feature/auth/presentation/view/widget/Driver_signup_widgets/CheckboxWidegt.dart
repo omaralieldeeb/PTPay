@@ -19,10 +19,10 @@ class _CheckboxWidgetDriverState extends State<CheckboxWidgetDriver> {
       children: [
         _buildCustomCheckbox(
           title: "أقبل استقبال التحديثات عبر البريد الإلكتروني.",
-          value: _acceptTerms,
+          value: _acceptUpdates,
           onChanged: (value) {
             setState(() {
-              _acceptTerms = value!;
+              _acceptUpdates = value!;
             });
             widget.onChanged(_acceptUpdates, _acceptTerms);
           },

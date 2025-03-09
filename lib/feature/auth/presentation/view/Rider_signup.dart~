@@ -83,12 +83,12 @@ class _SignUpPageRiderState extends State<SignUpPageRider> {
 
     try {
       final response = await _apiService.post(
-        endpoint: 'https://example.com/api/RegisterView/', // استبدل الرابط بالرابط الصحيح
+        endpoint: 'https://ahmed808.pythonanywhere.com/api/register/user/', // استبدل الرابط بالرابط الصحيح
         data: data,
       );
 
       if (response) {
-        GoRouter.of(context).push(AppRouter.KOTP);
+        Navigator.pushNamed(context, '/KOTP');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("فشل التسجيل، يرجى المحاولة مرة أخرى")),

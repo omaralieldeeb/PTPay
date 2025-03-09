@@ -1,8 +1,9 @@
 import 'dart:io';
-import 'package:dotted_border/dotted_border.dart';
+
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:ptpay/core/utils/api_service1.dart';
 import 'package:ptpay/core/utils/gorouter.dart';
 import 'package:ptpay/core/widget/LinearGradien.dart';
 import 'package:ptpay/core/widget/logo.dart';
@@ -11,6 +12,8 @@ import 'package:ptpay/feature/auth/presentation/view/widget/Driver_signup_widget
 import 'package:ptpay/feature/auth/presentation/view/widget/Driver_signup_widgets/ValidationRowSignup.dart';
 import 'package:ptpay/feature/auth/presentation/view/widget/Driver_signup_widgets/buildPasswordField.dart';
 import 'package:ptpay/feature/auth/presentation/view/widget/Driver_signup_widgets/buildTextField.dart';
+import 'package:ptpay/feature/auth/presentation/view/widget/Driver_signup_widgets/image_picker.dart';
+
 
 class SignUpPageDriver extends StatefulWidget {
   const SignUpPageDriver({super.key});
@@ -21,7 +24,6 @@ class SignUpPageDriver extends StatefulWidget {
 
 class _SignUpPageDriverState extends State<SignUpPageDriver> {
   final _formKey = GlobalKey<FormState>();
-  bool isFormValid = false;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _idController = TextEditingController();
@@ -30,13 +32,17 @@ class _SignUpPageDriverState extends State<SignUpPageDriver> {
   final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _confirmPasswordController = TextEditingController();
   final TextEditingController _carNameController = TextEditingController();
+  final TextEditingController _personalImageController = TextEditingController();
+  final TextEditingController _licenseImageController = TextEditingController();
 
+  bool isFormValid = false;
+  bool _isChecked = false;
+  bool _isPasswordLengthValid = false;
+  bool _hasUpperCase = false;
+  bool _hasSpecialChar = false;
+  bool _isMatch = false;
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
-  bool _isChecked = false;
-  bool _isPasswordValid = false;
-  bool _isMatch = false;
-  File? _selectedImage;
 
   void _validateForm() {
     setState(() {
@@ -44,18 +50,86 @@ class _SignUpPageDriverState extends State<SignUpPageDriver> {
           _idController.text.isNotEmpty &&
           _phoneController.text.isNotEmpty &&
           _emailController.text.isNotEmpty &&
-          _isPasswordValid &&
+          _isPasswordLengthValid &&
+          _hasUpperCase &&
+          _hasSpecialChar &&
           _isMatch &&
           _isChecked;
     });
   }
 
-  Future<void> _pickImage() async {
-    final pickedFile = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() {
-        _selectedImage = File(pickedFile.path);
-      });
+  File? _selectedImage;
+  void _validatePassword(String password) {
+    bool isLengthValid = password.length >= 8;
+    bool hasUpperCase = password.contains(RegExp(r'[A-Z]'));
+    bool hasSpecialChar = password.contains(RegExp(r'[!@#\$%^&*(),.?":{}|<>]'));
+    bool isMatch = password == _confirmPasswordController.text;
+
+    setState(() {
+      _isPasswordLengthValid = isLengthValid;
+      _hasUpperCase = hasUpperCase;
+      _hasSpecialChar = hasSpecialChar;
+      _isMatch = isMatch;
+    });
+    _validateForm();
+  }
+
+  void _validateConfirmPassword(String confirmPassword) {
+    bool isMatch = confirmPassword == _passwordController.text;
+    setState(() {
+      _isMatch = isMatch;
+    });
+    _validateForm();
+  }
+
+  final ApiService _apiService = ApiService(Dio());
+
+  Future<void> _registerUser() async {
+    if (!isFormValid) return;
+
+    final Map<String, dynamic> data = {
+      "full_name": _nameController.text,
+      "national_id": _idController.text,
+      "phone": _phoneController.text,
+      "email": _emailController.text,
+      "driver_photo": await MultipartFile.fromFile(_personalImageController.text),
+      "password": _passwordController.text,
+      "password2": _confirmPasswordController.text,
+      "license_number": _carNameController.text,
+      "license_photo": await MultipartFile.fromFile(_licenseImageController.text),
+    };
+
+    try {
+      final response = await _apiService.post(
+        endpoint: 'https://ahmed808.pythonanywhere.com/api/register/driver/',
+        data: data,
+      );
+
+      if (response) {
+        GoRouter.of(context).push(AppRouter.KOTP);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("فشل التسجيل، يرجى المحاولة مرة أخرى")),
+        );
+      }
+    } on DioException catch (e) {
+      String errorMessage = "حدث خطأ أثناء الاتصال بالخادم";
+
+      if (e.response != null) {
+        errorMessage = "خطأ من الخادم: ${e.response!.statusMessage}";
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage = "تعذر الاتصال بالخادم. تأكد من اتصالك بالإنترنت.";
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage = "انتهت مهلة الاتصال بالخادم.";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("حدث خطأ غير متوقع")),
+      );
     }
   }
 
@@ -71,15 +145,16 @@ class _SignUpPageDriverState extends State<SignUpPageDriver> {
               color: Colors.white,
               height: MediaQuery.of(context).size.height,
             ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: const Lineargradien(),
+            const Positioned.fill(
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                child: Lineargradien(),
+              ),
             ),
             SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -90,11 +165,14 @@ class _SignUpPageDriverState extends State<SignUpPageDriver> {
                       const Center(
                         child: Text(
                           "إنشاء حساب سائق",
-                          style: TextStyle(fontSize: 25, fontWeight: FontWeight.w600, color: Colors.black),
+                          style: TextStyle(
+                              fontSize: 25,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      Text(
+                      const SizedBox(height: 20),
+                      const Text(
                         " 1- البيانات الأساسية",
                         style: TextStyle(fontSize: 18, fontFamily: 'Alexandria', fontWeight: FontWeight.w500),
                         textAlign: TextAlign.right,
@@ -127,39 +205,19 @@ class _SignUpPageDriverState extends State<SignUpPageDriver> {
                         keyboardType: TextInputType.emailAddress,
                         onChanged: (_) => _validateForm(),
                       ),
-                      Text(
+                      const SizedBox(height: 10,),
+                      const Text(
                         "الصورة الشخصية",
                         style: TextStyle(fontSize: 16, fontFamily: 'Alexandria', fontWeight: FontWeight.w400),
                         textAlign: TextAlign.right,
                       ),
                       const SizedBox(height: 8),
-                      Center(
-                        child: InkWell(
-                          onTap: _pickImage,
-                          child: DottedBorder(
-                            borderType: BorderType.RRect,
-                            radius: const Radius.circular(16),
-                            dashPattern: [6, 4],
-                            color: Colors.black,
-                            strokeWidth: 2,
-                            child: Container(
-                              width: 390,
-                              height: 160,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: _selectedImage == null
-                                  ? const Icon(Icons.add_photo_alternate, size: 50, color: Colors.black)
-                                  : ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.file(
-                                  _selectedImage!,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                      ImagePickerWidget(
+                        onImageSelected: (File? image) {
+                          setState(() {
+                            _personalImageController.text = image?.path ?? '';
+                          });
+                        },
                       ),
                       const SizedBox(height: 15),
                       Column(
@@ -168,31 +226,33 @@ class _SignUpPageDriverState extends State<SignUpPageDriver> {
                             label: 'كلمة المرور',
                             controller: _passwordController,
                             isVisible: _isPasswordVisible,
-                            onChanged: (password) {
-                              setState(() {
-                                _isPasswordValid = password.length >= 8;
-                                _isMatch = password == _confirmPasswordController.text;
-                              });
-                              _validateForm();
-                            },
-                            toggleVisibility: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
+                            onChanged: _validatePassword,
+                            toggleVisibility: () => setState(
+                                    () => _isPasswordVisible = !_isPasswordVisible),
                           ),
                           ValidationRowSignupDriver(
                             text: 'يجب أن لا تقل كلمة المرور عن 8 أحرف',
-                            isValid: _isPasswordValid,
+                            isValid: _isPasswordLengthValid,
+                          ),
+                          ValidationRowSignupDriver(
+                            text:
+                            'يجب أن تحتوي كلمة المرور على رموز مثل (!,@,#,\$,)',
+                            isValid: _hasSpecialChar,
+                          ),
+                          ValidationRowSignupDriver(
+                            text:
+                            'يجب أن تحتوي كلمة المرور على حروف كبيرة (A-Z)',
+                            isValid: _hasUpperCase,
                           ),
                           const SizedBox(height: 15),
                           PasswordFieldSignupDriver(
                             label: 'تأكيد كلمة المرور',
                             controller: _confirmPasswordController,
                             isVisible: _isConfirmPasswordVisible,
-                            onChanged: (confirmPassword) {
-                              setState(() {
-                                _isMatch = confirmPassword == _passwordController.text;
-                              });
-                              _validateForm();
-                            },
-                            toggleVisibility: () => setState(() => _isConfirmPasswordVisible = !_isConfirmPasswordVisible),
+                            onChanged: _validateConfirmPassword,
+                            toggleVisibility: () => setState(() =>
+                            _isConfirmPasswordVisible =
+                            !_isConfirmPasswordVisible),
                           ),
                           ValidationRowSignupDriver(
                             text: 'متطابقتان',
@@ -201,7 +261,7 @@ class _SignUpPageDriverState extends State<SignUpPageDriver> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Text(
+                      const Text(
                         " 2- بيانات المركبة والرخصة",
                         style: TextStyle(fontSize: 18, fontFamily: 'Alexandria', fontWeight: FontWeight.w500),
                         textAlign: TextAlign.right,
@@ -213,39 +273,18 @@ class _SignUpPageDriverState extends State<SignUpPageDriver> {
                         controller: _carNameController,
                         onChanged: (_) => _validateForm(),
                       ),
-                      Text(
+                      const Text(
                         "صورة الرخصة",
                         style: TextStyle(fontSize: 16, fontFamily: 'Alexandria', fontWeight: FontWeight.w400),
                         textAlign: TextAlign.right,
                       ),
                       const SizedBox(height: 8),
-                      Center(
-                        child: InkWell(
-                          onTap: _pickImage,
-                          child: DottedBorder(
-                            borderType: BorderType.RRect,
-                            radius: const Radius.circular(16),
-                            dashPattern: [6, 4],
-                            color: Colors.black,
-                            strokeWidth: 2,
-                            child: Container(
-                              width: 390,
-                              height: 160,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: _selectedImage == null
-                                  ? const Icon(Icons.add_photo_alternate, size: 50, color: Colors.black)
-                                  : ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: Image.file(
-                                  _selectedImage!,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                      ImagePickerWidget(
+                        onImageSelected: (File? image) {
+                          setState(() {
+                            _personalImageController.text = image?.path ?? '';
+                          });
+                        },
                       ),
                       const SizedBox(height: 20),
                       CheckboxWidgetDriver(
@@ -257,20 +296,26 @@ class _SignUpPageDriverState extends State<SignUpPageDriver> {
                         },
                       ),
                       const SizedBox(height: 20),
-                      SaveButtonSignUpDriver(isFormValid: isFormValid),
+                      SaveButtonSignUpDriver(
+                        isFormValid: isFormValid,
+                        onPressed: _registerUser,
+                      ),
                       const SizedBox(height: 15),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text(
                             "لديك حساب ؟ ",
-                            style: TextStyle(fontSize: 17, color: Color(0xff979797)),
+                            style: TextStyle(
+                                fontSize: 17, color: Color(0xff979797)),
                           ),
                           InkWell(
-                            onTap: () => GoRouter.of(context).push(AppRouter.KChooseLocationFirst),
+                            onTap: () => GoRouter.of(context)
+                                .push(AppRouter.KChooseLocationFirst),
                             child: const Text(
                               " تسجيل الدخول  ",
-                              style: TextStyle(fontSize: 17, color: Colors.black),
+                              style:
+                              TextStyle(fontSize: 17, color: Colors.black),
                             ),
                           ),
                         ],

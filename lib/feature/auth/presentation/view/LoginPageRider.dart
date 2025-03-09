@@ -1,10 +1,13 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:ptpay/core/utils/api_service1.dart';
 import 'package:ptpay/core/utils/gorouter.dart';
 import 'package:ptpay/core/widget/LinearGradien.dart';
 import 'package:ptpay/core/widget/logo.dart';
 import 'package:ptpay/feature/auth/presentation/view/widget/login_widgets/LoginButtonWidget.dart';
 import 'package:ptpay/feature/auth/presentation/view/widget/login_widgets/TextformWidget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPageRider extends StatefulWidget {
   const LoginPageRider({super.key});
@@ -23,12 +26,50 @@ class _LoginPageRiderState extends State<LoginPageRider> {
       _isDataEntered = phone.isNotEmpty && password.isNotEmpty;
     });
   }
+  final ApiService _apiService = ApiService(Dio());
+  Future<void> _handleLogin() async {
+    final phone = _phoneController.text;
+    final password = _passwordController.text;
+    if (phone.isEmpty || password.isEmpty) {
+      return;
+    }
+
+    try {
+      final response = await Dio().post(
+        "https://cors-anywhere.herokuapp.com/https://ahmed808.pythonanywhere.com/api/jwt/create/",
+        data: {
+          'email': phone,
+          'password': password,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('access_token', response.data["access"]);
+        await prefs.setString('refresh_token', response.data["refresh"]);
+
+        GoRouter.of(context).push(AppRouter.KHomepage);
+      } else {
+        print("فشل تسجيل الدخول، تحقق من بياناتك.");
+      }
+    } catch (e) {
+      print("حدث خطأ أثناء تسجيل الدخول: $e");
+    }
+  }
+
+
+  @override
+  void dispose() {
+    _phoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        resizeToAvoidBottomInset:false,
+        resizeToAvoidBottomInset: false,
         backgroundColor: Colors.white,
         body: Stack(
           children: [
@@ -70,7 +111,7 @@ class _LoginPageRiderState extends State<LoginPageRider> {
                       const SizedBox(height: 9),
                       InkWell(
                         onTap: () {
-                          Navigator.pushNamed(context, '/forgetPassword');
+                          GoRouter.of(context).push(AppRouter.KForgetpassword);
                         },
                         child: const Padding(
                           padding: EdgeInsets.only(left: 53, right: 53, bottom: 20),
@@ -94,9 +135,7 @@ class _LoginPageRiderState extends State<LoginPageRider> {
                       const SizedBox(height: 171),
                       LoginButtonWidget(
                         isDataEntered: _isDataEntered,
-                        onTap: () {
-                          GoRouter.of(context).push(AppRouter.KHomepage);
-                        },
+                        onTap: _handleLogin,
                       ),
                       const SizedBox(height: 15),
                       Row(

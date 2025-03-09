@@ -1,21 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:ptpay/core/utils/gorouter.dart';
 
 class SaveButtonSignUpDriver extends StatelessWidget {
   final bool isFormValid;
+  final VoidCallback onPressed;
 
   const SaveButtonSignUpDriver({
     super.key,
     required this.isFormValid,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: isFormValid ? () {
-        GoRouter.of(context).push(AppRouter.KOTP);
-      } : null,
+      onTap: isFormValid ? onPressed : null,
       child: Center(
         child: Container(
           width: 300,
